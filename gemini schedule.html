@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Sync 2.0</title>
+    <style>
+        :root {
+            --elsie: #e91e63;
+            --elsie-bg: #fce4ec;
+            --cade: #00bcd4;
+            --cade-bg: #e0f7fa;
+            --overlap: #4caf50; /* Green for when they align */
+            --conflict: #ff9800; /* Orange for crunch time */
+            --dark: #263238;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; color: var(--dark); }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        /* Headers */
+        h1 { text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #666; font-size: 0.9em; margin-bottom: 25px; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+
+        /* Input Grid */
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .input-card { background: #fafafa; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
+        .elsie-border { border-top: 4px solid var(--elsie); }
+        .cade-border { border-top: 4px solid var(--cade); }
+        
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.85em; color: #555; }
+        input[type="time"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 1.1em; box-sizing: border-box; margin-bottom: 10px; }
+        
+        .action-btn { width: 100%; background: var(--dark); color: white; border: none; padding: 15px; font-size: 1.1em; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .action-btn:hover { background: #37474f; }
+
+        /* Timeline Output */
+        #timeline { margin-top: 30px; }
+        .event-row { display: flex; align-items: center; padding: 12px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid #ccc; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
+        .time-badge { font-weight: bold; min-width: 80px; font-size: 1.1em; }
+        .event-details { flex-grow: 1; margin-left: 15px; }
+        .event-title { font-weight: bold; display: block; }
+        .event-sub { font-size: 0.85em; color: #666; }
+
+        /* Status colors */
+        .type-elsie { border-color: var(--elsie); background: var(--elsie-bg); }
+        .type-cade { border-color: var(--cade); background: var(--cade-bg); }
+        .type-gold { border-color: var(--overlap); background: #e8f5e9; } /* Parents Break */
+        .type-warn { border-color: var(--conflict); background: #fff3e0; } /* Conflict */
+
+        .age-tag { float: right; font-size: 0.7em; font-weight: normal; background: #eee; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Family Sync</h1>
+    <div class="subtitle" id="date-display"></div>
+
+    <div class="input-grid">
+        <div class="input-card elsie-border">
+            <h3>🎀 Elsie <span id="elsie-age" class="age-tag"></span></h3>
+            <label>Last Woke Up:</label>
+            <input type="time" id="elsie-wake">
+            
+            <label>Last Finished Eating:</label>
+            <input type="time" id="elsie-eat">
+        </div>
+
+        <div class="input-card cade-border">
+            <h3>🦖 Cade <span id="cade-age" class="age-tag"></span></h3>
+            <label>Today's Nap Start (Est):</label>
+            <input type="time" id="cade-nap-start" value="13:00">
+            
+            <label>Today's Bedtime (Est):</label>
+            <input type="time" id="cade-bed" value="20:45">
+        </div>
+    </div>
+
+    <button class="action-btn" onclick="generateSchedule()">Update Unified Schedule</button>
+
+    <div id="timeline"></div>
+</div>
+
+<script>
+    // --- CONFIGURATION ---
+    const CONFIG = {
+        elsie: {
+            dob: new Date("2025-09-30"),
+            wakeMin: 75, wakeMax: 100, // minutes
+            feedMin: 120, feedMax: 180, // minutes
+            napAvg: 90 // used for forecasting overlap
+        },
+        cade: {
+            dob: new Date("2023-08-09"),
+            lunch: "12:00",
+            napDurMin: 90, // 1.5 hrs default
+            dinner: "18:00"
+        }
+    };
+
+    // --- INIT ---
+    window.onload = function() {
+        document.getElementById('date-display').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        
+        // Auto-fill times for ease
+        const now = new Date();
+        const twoHoursAgo = new Date(now.getTime() - (120 * 60000));
+        
+        document.getElementById('elsie-wake').value = formatTime(twoHoursAgo);
+        document.getElementById('elsie-eat').value = formatTime(twoHoursAgo);
+        
+        document.getElementById('elsie-age').innerText = getAge(CONFIG.elsie.dob);
+        document.getElementById('cade-age').innerText = getAge(CONFIG.cade.dob);
+    };
+
+    // --- CORE LOGIC ---
+    function generateSchedule() {
+        const timeline = document.getElementById('timeline');
+        timeline.innerHTML = ""; // Clear previous
+
+        let events = [];
+
+        // 1. GET INPUTS
+        const elsieWakeStr = document.getElementById('elsie-wake').value;
+        const elsieEatStr = document.getElementById('elsie-eat').value;
+        const cadeNapStr = document.getElementById('cade-nap-start').value;
+        const cadeBedStr = document.getElementById('cade-bed').value;
+
+        // 2. CALCULATE ELSIE NEXT STEPS
+        const elsieNapStart = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMin);
+        const elsieNapEndWindow = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMax);
+        const elsieFeedStart = addMinutes(elsieEatStr, CONFIG.elsie.feedMin);
+        const elsieFeedEnd = addMinutes(elsieEatStr, CONFIG.elsie.feedMax);
+
+        // Elsie Events
+        events.push({
+            time: elsieNapStart,
+            title: "Elsie: Nap Window Opens",
+            sub: `Ideally asleep by ${elsieNapEndWindow}. Keep upright if refluxy.`,
+            type: "type-elsie",
+            rawTime: getMinutes(elsieNapStart)
+        });
+
+        events.push({
+            time: elsieFeedStart,
+            title: "Elsie: Feed Due",
+            sub: `Must eat by ${elsieFeedEnd}. If napping, feed upon waking.`,
+            type: "type-elsie",
+            rawTime: getMinutes(elsieFeedStart)
+        });
+
+        // 3. CALCULATE CADE EVENTS (Fixed/Baseline)
+        const cadeLunch = CONFIG.cade.lunch;
+        const cadeNapEnd = addMinutes(cadeNapStr, CONFIG.cade.napDurMin);
+        const cadeDinner = CONFIG.cade.dinner;
+
+        events.push({ time: cadeLunch, title: "Cade: Lunch", sub: "Solid food meal", type: "type-cade", rawTime: getMinutes(cadeLunch) });
+        events.push({ time: cadeNapStr, title: "Cade: Nap Starts", sub: "Wind down with a book", type: "type-cade", rawTime: getMinutes(cadeNapStr) });
+        events.push({ time: cadeNapEnd, title: "Cade: Wakes (Approx)", sub: "Offer snack immediately", type: "type-cade", rawTime: getMinutes(cadeNapEnd) });
+        events.push({ time: cadeDinner, title: "Cade: Dinner", sub: "Family time", type: "type-cade", rawTime: getMinutes(cadeDinner) });
+        events.push({ time: cadeBedStr, title: "Cade: Bedtime", sub: "Lights out", type: "type-cade", rawTime: getMinutes(cadeBedStr) });
+
+        // 4. CHECK FOR OVERLAPS (The Magic)
+        const eNapStartVal = getMinutes(elsieNapStart);
+        const eNapEndVal = eNapStartVal + CONFIG.elsie.napAvg; // forecast
+        const cNapStartVal = getMinutes(cadeNapStr);
+        const cNapEndVal = getMinutes(cadeNapEnd);
+
+        // Check for "Golden Hour" (Overlap Sleep)
+        const overlapStart = Math.max(eNapStartVal, cNapStartVal);
+        const overlapEnd = Math.min(eNapEndVal, cNapEndVal);
+
+        if (overlapStart < overlapEnd) {
+            events.push({
+                time: minsToTime(overlapStart),
+                title: "✨ GOLDEN HOUR ✨",
+                sub: `Both kids likely sleeping until ${minsToTime(overlapEnd)}. TAKE A BREAK.`,
+                type: "type-gold",
+                rawTime: overlapStart
+            });
+        }
+
+        // Check for Conflict (Elsie needs nap during Cade Lunch/Dinner)
+        const cLunchVal = getMinutes(cadeLunch);
+        const cDinnerVal = getMinutes(cadeDinner);
+        
+        if (Math.abs(eNapStartVal - cLunchVal) < 30) {
+            events.push({
+                time: minsToTime(eNapStartVal),
+                title: "⚠️ Zone Defense Needed",
+                sub: "Elsie needs to sleep during Cade's lunch. One parent on each kid.",
+                type: "type-warn",
+                rawTime: eNapStartVal - 1 // slight offset to show before
+            });
+        }
+
+        // 5. SORT & RENDER
+        events.sort((a, b) => a.rawTime - b.rawTime);
+
+        // Filter out events that passed long ago (optional, keeping all for now for view)
+        
+        events.forEach(ev => {
+            const html = `
+                <div class="event-row ${ev.type}">
+                    <div class="time-badge">${convertTo12Hour(ev.time)}</div>
+                    <div class="event-details">
+                        <span class="event-title">${ev.title}</span>
+                        <span class="event-sub">${ev.sub}</span>
+                    </div>
+                </div>
+            `;
+            timeline.innerHTML += html;
+        });
+    }
+
+    // --- UTILS ---
+    function getMinutes(timeStr) {
+        const [h, m] = timeStr.split(':').map(Number);
+        return (h * 60) + m;
+    }
+    
+    function minsToTime(totalMins) {
+        let h = Math.floor(totalMins / 60);
+        let m = totalMins % 60;
+        if (h >= 24) h -= 24;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function addMinutes(timeStr, minsToAdd) {
+        let total = getMinutes(timeStr) + minsToAdd;
+        return minsToTime(total);
+    }
+
+    function convertTo12Hour(timeStr) {
+        let [h, m] = timeStr.split(':');
+        h = parseInt(h);
+        const suffix = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m} ${suffix}`;
+    }
+
+    function getAge(birthDate) {
+        const today = new Date();
+        let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+        months -= birthDate.getMonth();
+        months += today.getMonth();
+        if (today.getDate() < birthDate.getDate()) months--;
+        const years = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+        if (years > 0) return `${years}y ${remainingMonths}m`;
+        return `${months}mo`;
+    }
+
+    function formatTime(date) {
+        return date.toTimeString().substring(0,5);
+    }
+</script>
+
+</body>
+</html>
