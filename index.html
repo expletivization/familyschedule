@@ -31,6 +31,14 @@
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.85em; color: #555; }
         input[type="time"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 1.1em; box-sizing: border-box; margin-bottom: 10px; }
         
+        /* Toggle Switch */
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 26px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--dark); }
+        input:checked + .toggle-slider:before { transform: translateX(24px); }
+        
         .action-btn { width: 100%; background: var(--dark); color: white; border: none; padding: 15px; font-size: 1.1em; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .action-btn:hover { background: #37474f; }
         
@@ -53,6 +61,16 @@
         .type-warn { border-color: var(--conflict); background: #fff3e0; } /* Conflict */
 
         .age-tag { float: right; font-size: 0.7em; font-weight: normal; background: #eee; padding: 2px 6px; border-radius: 4px; }
+        
+        /* Checklist */
+        .checklist-section { background: #fafafa; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
+        .checklist-item { display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #eee; }
+        .checklist-item.completed { opacity: 0.6; }
+        .checklist-item.completed .item-text { text-decoration: line-through; }
+        .checklist-item input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; cursor: pointer; }
+        .item-text { flex-grow: 1; }
+        .delete-btn { background: #ff5252; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .delete-btn:hover { background: #ff1744; }
     </style>
 </head>
 <body>
@@ -63,20 +81,32 @@
 
     <div class="input-grid">
         <div class="input-card elsie-border">
-            <h3>🎀 Elsie <span id="elsie-age" class="age-tag"></span></h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0;">🎀 Elsie <span id="elsie-age" class="age-tag"></span></h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="elsie-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
             <label>Last Woke Up:</label>
             <input type="time" id="elsie-wake">
             
-            <label>Last Finished Eating:</label>
+            <label>Last Meal:</label>
             <input type="time" id="elsie-eat">
         </div>
 
         <div class="input-card cade-border">
-            <h3>🦖 Cade <span id="cade-age" class="age-tag"></span></h3>
-            <label>Today's Nap Start (Est):</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0;">🦖 Cade <span id="cade-age" class="age-tag"></span></h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cade-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <label>Today's Nap Start:</label>
             <input type="time" id="cade-nap-start" value="13:00">
             
-            <label>Today's Bedtime (Est):</label>
+            <label>Today's Bedtime:</label>
             <input type="time" id="cade-bed" value="20:45">
         </div>
     </div>
@@ -85,6 +115,59 @@
     <button class="reset-btn" onclick="resetData()">Clear Saved Data</button>
 
     <div id="timeline"></div>
+
+    <!-- Checklists -->
+    <div style="margin-top: 40px;">
+        <div class="checklist-section elsie-border" style="margin-bottom: 20px;">
+            <h3>🎀 Elsie's Checklist</h3>
+            <div id="elsie-checklist"></div>
+            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <input type="text" id="elsie-new-item" placeholder="Add item..." style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                <button onclick="addChecklistItem('elsie')" style="padding: 8px 15px; background: var(--elsie); color: white; border: none; border-radius: 6px; cursor: pointer;">Add</button>
+            </div>
+        </div>
+
+        <div class="checklist-section cade-border">
+            <h3>🦖 Cade's Checklist</h3>
+            <div id="cade-checklist"></div>
+            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <input type="text" id="cade-new-item" placeholder="Add item..." style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                <button onclick="addChecklistItem('cade')" style="padding: 8px 15px; background: var(--cade); color: white; border: none; border-radius: 6px; cursor: pointer;">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div style="margin-top: 40px;">
+        <div class="settings-header" onclick="toggleSettings()">
+            <h3 style="margin: 0; cursor: pointer; user-select: none;">⚙️ Settings <span id="settings-arrow">▼</span></h3>
+        </div>
+        <div id="settings-content" style="display: none; margin-top: 15px; padding: 15px; background: #fafafa; border-radius: 8px;">
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-top: 0; color: var(--elsie);">Elsie Settings</h4>
+                <label>Wake Window (min-max minutes):</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="number" id="elsie-wake-min" value="75" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                    <span style="align-self: center;">to</span>
+                    <input type="number" id="elsie-wake-max" value="100" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                </div>
+                <label>Feed Window (min-max minutes):</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="number" id="elsie-feed-min" value="120" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                    <span style="align-self: center;">to</span>
+                    <input type="number" id="elsie-feed-max" value="180" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                </div>
+                <label>Average Nap Duration (minutes):</label>
+                <input type="number" id="elsie-nap-avg" value="90" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px;">
+            </div>
+            <div>
+                <h4 style="color: var(--cade);">Cade Settings</h4>
+                <label>Nap Duration (minutes):</label>
+                <input type="number" id="cade-nap-dur" value="90" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px;">
+            </div>
+            <button onclick="saveSettings()" style="width: 100%; padding: 10px; background: var(--dark); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Save Settings</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -111,9 +194,33 @@
             elsieEat: document.getElementById('elsie-eat').value,
             cadeNapStart: document.getElementById('cade-nap-start').value,
             cadeBed: document.getElementById('cade-bed').value,
+            elsieToggle: document.getElementById('elsie-toggle').checked,
+            cadeToggle: document.getElementById('cade-toggle').checked,
+            elsieChecklist: getChecklistData('elsie'),
+            cadeChecklist: getChecklistData('cade'),
+            settings: {
+                elsieWakeMin: document.getElementById('elsie-wake-min').value,
+                elsieWakeMax: document.getElementById('elsie-wake-max').value,
+                elsieFeedMin: document.getElementById('elsie-feed-min').value,
+                elsieFeedMax: document.getElementById('elsie-feed-max').value,
+                elsieNapAvg: document.getElementById('elsie-nap-avg').value,
+                cadeNapDur: document.getElementById('cade-nap-dur').value
+            },
             savedDate: new Date().toDateString()
         };
         localStorage.setItem('familySyncData', JSON.stringify(data));
+    }
+
+    function getChecklistData(kid) {
+        const container = document.getElementById(`${kid}-checklist`);
+        const items = [];
+        container.querySelectorAll('.checklist-item').forEach(item => {
+            items.push({
+                text: item.querySelector('.item-text').textContent,
+                completed: item.querySelector('input[type="checkbox"]').checked
+            });
+        });
+        return items;
     }
 
     function loadSavedData() {
@@ -133,6 +240,25 @@
                 if (data.cadeNapStart) document.getElementById('cade-nap-start').value = data.cadeNapStart;
                 if (data.cadeBed) document.getElementById('cade-bed').value = data.cadeBed;
                 
+                // Load toggles
+                if (data.elsieToggle !== undefined) document.getElementById('elsie-toggle').checked = data.elsieToggle;
+                if (data.cadeToggle !== undefined) document.getElementById('cade-toggle').checked = data.cadeToggle;
+                
+                // Load checklists
+                if (data.elsieChecklist) loadChecklistData('elsie', data.elsieChecklist);
+                if (data.cadeChecklist) loadChecklistData('cade', data.cadeChecklist);
+                
+                // Load settings
+                if (data.settings) {
+                    document.getElementById('elsie-wake-min').value = data.settings.elsieWakeMin || 75;
+                    document.getElementById('elsie-wake-max').value = data.settings.elsieWakeMax || 100;
+                    document.getElementById('elsie-feed-min').value = data.settings.elsieFeedMin || 120;
+                    document.getElementById('elsie-feed-max').value = data.settings.elsieFeedMax || 180;
+                    document.getElementById('elsie-nap-avg').value = data.settings.elsieNapAvg || 90;
+                    document.getElementById('cade-nap-dur').value = data.settings.cadeNapDur || 90;
+                    applySettings();
+                }
+                
                 // Auto-generate schedule if we loaded data
                 generateSchedule();
             } else {
@@ -143,6 +269,14 @@
             // No saved data, use defaults
             setDefaultTimes();
         }
+    }
+
+    function loadChecklistData(kid, items) {
+        const container = document.getElementById(`${kid}-checklist`);
+        container.innerHTML = '';
+        items.forEach(item => {
+            addChecklistItemWithData(kid, item.text, item.completed);
+        });
     }
 
     function setDefaultTimes() {
@@ -178,6 +312,16 @@
         document.getElementById('elsie-eat').addEventListener('change', saveData);
         document.getElementById('cade-nap-start').addEventListener('change', saveData);
         document.getElementById('cade-bed').addEventListener('change', saveData);
+        document.getElementById('elsie-toggle').addEventListener('change', saveData);
+        document.getElementById('cade-toggle').addEventListener('change', saveData);
+        
+        // Add Enter key support for checklist inputs
+        document.getElementById('elsie-new-item').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addChecklistItem('elsie');
+        });
+        document.getElementById('cade-new-item').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addChecklistItem('cade');
+        });
     };
 
     // --- CORE LOGIC ---
@@ -187,84 +331,93 @@
 
         let events = [];
 
+        // Check which kids are active
+        const elsieActive = document.getElementById('elsie-toggle').checked;
+        const cadeActive = document.getElementById('cade-toggle').checked;
+
         // 1. GET INPUTS
         const elsieWakeStr = document.getElementById('elsie-wake').value;
         const elsieEatStr = document.getElementById('elsie-eat').value;
         const cadeNapStr = document.getElementById('cade-nap-start').value;
         const cadeBedStr = document.getElementById('cade-bed').value;
 
-        // 2. CALCULATE ELSIE NEXT STEPS
-        const elsieNapStart = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMin);
-        const elsieNapEndWindow = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMax);
-        const elsieFeedStart = addMinutes(elsieEatStr, CONFIG.elsie.feedMin);
-        const elsieFeedEnd = addMinutes(elsieEatStr, CONFIG.elsie.feedMax);
+        // 2. CALCULATE ELSIE NEXT STEPS (if active)
+        if (elsieActive) {
+            const elsieNapStart = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMin);
+            const elsieNapEndWindow = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMax);
+            const elsieFeedStart = addMinutes(elsieEatStr, CONFIG.elsie.feedMin);
+            const elsieFeedEnd = addMinutes(elsieEatStr, CONFIG.elsie.feedMax);
 
-        // Elsie Events
-        events.push({
-            time: elsieNapStart,
-            title: "Elsie: Nap Window Opens",
-            sub: `Ideally asleep by ${elsieNapEndWindow}. Keep upright if refluxy.`,
-            type: "type-elsie",
-            rawTime: getMinutes(elsieNapStart)
-        });
-
-        events.push({
-            time: elsieFeedStart,
-            title: "Elsie: Feed Due",
-            sub: `Must eat by ${elsieFeedEnd}. If napping, feed upon waking.`,
-            type: "type-elsie",
-            rawTime: getMinutes(elsieFeedStart)
-        });
-
-        // 3. CALCULATE CADE EVENTS (Fixed/Baseline)
-        const cadeLunch = CONFIG.cade.lunch;
-        const cadeNapEnd = addMinutes(cadeNapStr, CONFIG.cade.napDurMin);
-        const cadeDinner = CONFIG.cade.dinner;
-
-        events.push({ time: cadeLunch, title: "Cade: Lunch", sub: "Solid food meal", type: "type-cade", rawTime: getMinutes(cadeLunch) });
-        events.push({ time: cadeNapStr, title: "Cade: Nap Starts", sub: "Wind down with a book", type: "type-cade", rawTime: getMinutes(cadeNapStr) });
-        events.push({ time: cadeNapEnd, title: "Cade: Wakes (Approx)", sub: "Offer snack immediately", type: "type-cade", rawTime: getMinutes(cadeNapEnd) });
-        events.push({ time: cadeDinner, title: "Cade: Dinner", sub: "Family time", type: "type-cade", rawTime: getMinutes(cadeDinner) });
-        events.push({ time: cadeBedStr, title: "Cade: Bedtime", sub: "Lights out", type: "type-cade", rawTime: getMinutes(cadeBedStr) });
-
-        // 4. CHECK FOR OVERLAPS (The Magic)
-        const eNapStartVal = getMinutes(elsieNapStart);
-        const eNapEndVal = eNapStartVal + CONFIG.elsie.napAvg; // forecast
-        const cNapStartVal = getMinutes(cadeNapStr);
-        const cNapEndVal = getMinutes(cadeNapEnd);
-
-        // Check for "Golden Hour" (Overlap Sleep)
-        const overlapStart = Math.max(eNapStartVal, cNapStartVal);
-        const overlapEnd = Math.min(eNapEndVal, cNapEndVal);
-
-        if (overlapStart < overlapEnd) {
+            // Elsie Events
             events.push({
-                time: minsToTime(overlapStart),
-                title: "✨ GOLDEN HOUR ✨",
-                sub: `Both kids likely sleeping until ${minsToTime(overlapEnd)}. TAKE A BREAK.`,
-                type: "type-gold",
-                rawTime: overlapStart
+                time: elsieNapStart,
+                title: "Elsie: Nap Window Opens",
+                sub: `Ideally asleep by ${elsieNapEndWindow}. Keep upright if refluxy.`,
+                type: "type-elsie",
+                rawTime: getMinutes(elsieNapStart)
+            });
+
+            events.push({
+                time: elsieFeedStart,
+                title: "Elsie: Feed Due",
+                sub: `Must eat by ${elsieFeedEnd}. If napping, feed upon waking.`,
+                type: "type-elsie",
+                rawTime: getMinutes(elsieFeedStart)
             });
         }
 
-        // Check for Conflict (Elsie needs nap during Cade Lunch/Dinner)
-        const cLunchVal = getMinutes(cadeLunch);
-        const cDinnerVal = getMinutes(cadeDinner);
-        
-        if (Math.abs(eNapStartVal - cLunchVal) < 30) {
-            events.push({
-                time: minsToTime(eNapStartVal),
-                title: "⚠️ Zone Defense Needed",
-                sub: "Elsie needs to sleep during Cade's lunch. One parent on each kid.",
-                type: "type-warn",
-                rawTime: eNapStartVal - 1 // slight offset to show before
-            });
+        // 3. CALCULATE CADE EVENTS (if active)
+        if (cadeActive) {
+            const cadeLunch = CONFIG.cade.lunch;
+            const cadeNapEnd = addMinutes(cadeNapStr, CONFIG.cade.napDurMin);
+            const cadeDinner = CONFIG.cade.dinner;
+
+            events.push({ time: cadeLunch, title: "Cade: Lunch", sub: "Solid food meal", type: "type-cade", rawTime: getMinutes(cadeLunch) });
+            events.push({ time: cadeNapStr, title: "Cade: Nap Starts", sub: "Wind down with a book", type: "type-cade", rawTime: getMinutes(cadeNapStr) });
+            events.push({ time: cadeNapEnd, title: "Cade: Wakes (Approx)", sub: "Offer snack immediately", type: "type-cade", rawTime: getMinutes(cadeNapEnd) });
+            events.push({ time: cadeDinner, title: "Cade: Dinner", sub: "Family time", type: "type-cade", rawTime: getMinutes(cadeDinner) });
+            events.push({ time: cadeBedStr, title: "Cade: Bedtime", sub: "Lights out", type: "type-cade", rawTime: getMinutes(cadeBedStr) });
+        }
+
+        // 4. CHECK FOR OVERLAPS (if both kids active)
+        if (elsieActive && cadeActive) {
+            const elsieNapStart = addMinutes(elsieWakeStr, CONFIG.elsie.wakeMin);
+            const eNapStartVal = getMinutes(elsieNapStart);
+            const eNapEndVal = eNapStartVal + CONFIG.elsie.napAvg;
+            const cNapStartVal = getMinutes(cadeNapStr);
+            const cadeNapEnd = addMinutes(cadeNapStr, CONFIG.cade.napDurMin);
+            const cNapEndVal = getMinutes(cadeNapEnd);
+
+            // Check for "Golden Hour" (Overlap Sleep)
+            const overlapStart = Math.max(eNapStartVal, cNapStartVal);
+            const overlapEnd = Math.min(eNapEndVal, cNapEndVal);
+
+            if (overlapStart < overlapEnd) {
+                events.push({
+                    time: minsToTime(overlapStart),
+                    title: "✨ GOLDEN HOUR ✨",
+                    sub: `Both kids likely sleeping until ${minsToTime(overlapEnd)}. TAKE A BREAK.`,
+                    type: "type-gold",
+                    rawTime: overlapStart
+                });
+            }
+
+            // Check for Conflict (Elsie needs nap during Cade Lunch/Dinner)
+            const cLunchVal = getMinutes(CONFIG.cade.lunch);
+            
+            if (Math.abs(eNapStartVal - cLunchVal) < 30) {
+                events.push({
+                    time: minsToTime(eNapStartVal),
+                    title: "⚠️ Zone Defense Needed",
+                    sub: "Elsie needs to sleep during Cade's lunch. One parent on each kid.",
+                    type: "type-warn",
+                    rawTime: eNapStartVal - 1
+                });
+            }
         }
 
         // 5. SORT & RENDER
         events.sort((a, b) => a.rawTime - b.rawTime);
-
-        // Filter out events that passed long ago (optional, keeping all for now for view)
         
         events.forEach(ev => {
             const html = `
@@ -281,6 +434,72 @@
         
         // Save after generating
         saveData();
+    }
+
+    // --- CHECKLIST FUNCTIONS ---
+    function addChecklistItem(kid) {
+        const input = document.getElementById(`${kid}-new-item`);
+        const text = input.value.trim();
+        if (!text) return;
+        
+        addChecklistItemWithData(kid, text, false);
+        input.value = '';
+        saveData();
+    }
+
+    function addChecklistItemWithData(kid, text, completed) {
+        const container = document.getElementById(`${kid}-checklist`);
+        const item = document.createElement('div');
+        item.className = 'checklist-item' + (completed ? ' completed' : '');
+        item.innerHTML = `
+            <input type="checkbox" ${completed ? 'checked' : ''} onchange="toggleChecklistItem(this)">
+            <span class="item-text">${text}</span>
+            <button class="delete-btn" onclick="deleteChecklistItem(this)">Delete</button>
+        `;
+        container.appendChild(item);
+    }
+
+    function toggleChecklistItem(checkbox) {
+        const item = checkbox.closest('.checklist-item');
+        if (checkbox.checked) {
+            item.classList.add('completed');
+        } else {
+            item.classList.remove('completed');
+        }
+        saveData();
+    }
+
+    function deleteChecklistItem(btn) {
+        btn.closest('.checklist-item').remove();
+        saveData();
+    }
+
+    // --- SETTINGS FUNCTIONS ---
+    function toggleSettings() {
+        const content = document.getElementById('settings-content');
+        const arrow = document.getElementById('settings-arrow');
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            arrow.textContent = '▲';
+        } else {
+            content.style.display = 'none';
+            arrow.textContent = '▼';
+        }
+    }
+
+    function saveSettings() {
+        applySettings();
+        saveData();
+        alert('Settings saved! Click "Update Unified Schedule" to apply changes.');
+    }
+
+    function applySettings() {
+        CONFIG.elsie.wakeMin = parseInt(document.getElementById('elsie-wake-min').value);
+        CONFIG.elsie.wakeMax = parseInt(document.getElementById('elsie-wake-max').value);
+        CONFIG.elsie.feedMin = parseInt(document.getElementById('elsie-feed-min').value);
+        CONFIG.elsie.feedMax = parseInt(document.getElementById('elsie-feed-max').value);
+        CONFIG.elsie.napAvg = parseInt(document.getElementById('elsie-nap-avg').value);
+        CONFIG.cade.napDurMin = parseInt(document.getElementById('cade-nap-dur').value);
     }
 
     // --- UTILS ---
