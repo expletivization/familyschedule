@@ -1305,16 +1305,16 @@
 
             events.push({
                 time: elsieNapStart,
-                title: "Elsie: Nap Window Opens",
-                sub: `Ideally asleep by ${convertTo12Hour(elsieNapEndWindow)}. Keep upright if refluxy.`,
+                title: "Elsie: Nap Window",
+                sub: `Asleep between ${convertTo12Hour(elsieNapStart)} – ${convertTo12Hour(elsieNapEndWindow)}`,
                 type: "elsie",
                 rawTime: getMinutes(elsieNapStart)
             });
 
             events.push({
                 time: elsieFeedStart,
-                title: "Elsie: Feed Due",
-                sub: `Must eat by ${convertTo12Hour(elsieFeedEnd)}. If napping, feed upon waking.`,
+                title: "Elsie: Feed Window",
+                sub: `Feed between ${convertTo12Hour(elsieFeedStart)} – ${convertTo12Hour(elsieFeedEnd)}`,
                 type: "elsie",
                 rawTime: getMinutes(elsieFeedStart)
             });
