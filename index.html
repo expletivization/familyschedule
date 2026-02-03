@@ -163,6 +163,7 @@
         padding: 28px;
         position: relative;
         overflow: hidden;
+        transition: all 0.4s var(--ease-out);
     }
 
     .kid-card::before {
@@ -172,7 +173,34 @@
         left: 0;
         right: 0;
         height: 4px;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .kid-card.collapsed {
+        padding: 20px 28px;
+        opacity: 0.6;
+    }
+
+    .kid-card.collapsed:hover {
+        opacity: 0.8;
+    }
+
+    .kid-card.collapsed .card-header {
+        margin-bottom: 0;
+    }
+
+    .kid-card.collapsed .card-body {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        margin-top: 0;
+    }
+
+    .card-body {
+        max-height: 500px;
+        opacity: 1;
+        overflow: hidden;
+        transition: all 0.4s var(--ease-out);
+        margin-top: 0;
     }
 
     .kid-card.elsie::before {
@@ -451,6 +479,8 @@
         box-shadow: var(--shadow-sm);
         transition: all 0.3s var(--ease-out);
         animation: eventSlide 0.5s var(--ease-out) backwards;
+        position: relative;
+        overflow: hidden;
     }
 
     @keyframes eventSlide {
@@ -466,11 +496,11 @@
     }
 
     .event-indicator {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
         width: 4px;
-        border-radius: 2px;
-        flex-shrink: 0;
-        margin: -20px 0;
-        margin-left: -24px;
     }
 
     .event.elsie .event-indicator { background: linear-gradient(180deg, var(--elsie) 0%, #F472B6 100%); }
@@ -530,6 +560,7 @@
     .checklist-card {
         padding: 24px;
         position: relative;
+        overflow: hidden;
     }
 
     .checklist-card::before {
@@ -539,7 +570,6 @@
         left: 0;
         right: 0;
         height: 3px;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
 
     .checklist-card.elsie::before {
@@ -870,13 +900,16 @@
             flex-direction: column;
             gap: 8px;
             padding: 16px 20px;
+            padding-top: 20px;
         }
 
         .event-indicator {
             width: 100%;
-            height: 3px;
-            margin: -16px -20px 8px;
-            border-radius: var(--radius-md) var(--radius-md) 0 0;
+            height: 4px;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: auto;
         }
 
         .event-time {
@@ -916,7 +949,7 @@
 ```
 <!-- Input Cards -->
 <div class="input-grid">
-    <div class="glass-card kid-card elsie">
+    <div class="glass-card kid-card elsie" id="elsie-card">
         <div class="card-header">
             <div class="card-identity">
                 <div class="avatar">🎀</div>
@@ -930,23 +963,25 @@
                 <span class="toggle-track"></span>
             </label>
         </div>
-        <div class="form-group">
-            <label class="form-label">Last Woke Up</label>
-            <div class="time-input-row">
-                <input type="time" class="form-input" id="elsie-wake">
-                <button type="button" class="btn-now" onclick="setNow('elsie-wake')">Now</button>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Last Woke Up</label>
+                <div class="time-input-row">
+                    <input type="time" class="form-input" id="elsie-wake">
+                    <button type="button" class="btn-now" onclick="setNow('elsie-wake')">Now</button>
+                </div>
             </div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Last Meal</label>
-            <div class="time-input-row">
-                <input type="time" class="form-input" id="elsie-eat">
-                <button type="button" class="btn-now" onclick="setNow('elsie-eat')">Now</button>
+            <div class="form-group">
+                <label class="form-label">Last Meal</label>
+                <div class="time-input-row">
+                    <input type="time" class="form-input" id="elsie-eat">
+                    <button type="button" class="btn-now" onclick="setNow('elsie-eat')">Now</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="glass-card kid-card cade">
+    <div class="glass-card kid-card cade" id="cade-card">
         <div class="card-header">
             <div class="card-identity">
                 <div class="avatar">🦖</div>
@@ -960,18 +995,20 @@
                 <span class="toggle-track"></span>
             </label>
         </div>
-        <div class="form-group">
-            <label class="form-label">Today's Nap Start</label>
-            <div class="time-input-row">
-                <input type="time" class="form-input" id="cade-nap-start" value="13:00">
-                <button type="button" class="btn-now" onclick="setNow('cade-nap-start')">Now</button>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Today's Nap Start</label>
+                <div class="time-input-row">
+                    <input type="time" class="form-input" id="cade-nap-start" value="13:00">
+                    <button type="button" class="btn-now" onclick="setNow('cade-nap-start')">Now</button>
+                </div>
             </div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Today's Bedtime</label>
-            <div class="time-input-row">
-                <input type="time" class="form-input" id="cade-bed" value="20:45">
-                <button type="button" class="btn-now" onclick="setNow('cade-bed')">Now</button>
+            <div class="form-group">
+                <label class="form-label">Today's Bedtime</label>
+                <div class="time-input-row">
+                    <input type="time" class="form-input" id="cade-bed" value="20:45">
+                    <button type="button" class="btn-now" onclick="setNow('cade-bed')">Now</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1197,6 +1234,20 @@
             document.getElementById('timeline').innerHTML = '<div class="timeline-empty">Enter times above to see your schedule</div>';
             document.getElementById('elsie-checklist').innerHTML = '';
             document.getElementById('cade-checklist').innerHTML = '';
+            // Reset toggles and expand cards
+            document.getElementById('elsie-toggle').checked = true;
+            document.getElementById('cade-toggle').checked = true;
+            toggleCardCollapse('elsie', true);
+            toggleCardCollapse('cade', true);
+        }
+    }
+
+    function toggleCardCollapse(kid, isExpanded) {
+        const card = document.getElementById(`${kid}-card`);
+        if (isExpanded) {
+            card.classList.remove('collapsed');
+        } else {
+            card.classList.add('collapsed');
         }
     }
 
@@ -1213,8 +1264,19 @@
         document.getElementById('elsie-eat').addEventListener('change', saveData);
         document.getElementById('cade-nap-start').addEventListener('change', saveData);
         document.getElementById('cade-bed').addEventListener('change', saveData);
-        document.getElementById('elsie-toggle').addEventListener('change', saveData);
-        document.getElementById('cade-toggle').addEventListener('change', saveData);
+        
+        document.getElementById('elsie-toggle').addEventListener('change', function() {
+            toggleCardCollapse('elsie', this.checked);
+            saveData();
+        });
+        document.getElementById('cade-toggle').addEventListener('change', function() {
+            toggleCardCollapse('cade', this.checked);
+            saveData();
+        });
+        
+        // Apply initial collapse state based on toggle values
+        toggleCardCollapse('elsie', document.getElementById('elsie-toggle').checked);
+        toggleCardCollapse('cade', document.getElementById('cade-toggle').checked);
         
         document.getElementById('elsie-new-item').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') addChecklistItem('elsie');
