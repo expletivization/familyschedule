@@ -859,6 +859,13 @@
         font-size: 0.9375rem;
     }
 
+    .btn-clear-checks {
+        width: 100%;
+        margin-top: 12px;
+        padding: 10px;
+        font-size: 0.8125rem;
+    }
+
     /* Settings */
     .settings-section {
         margin-top: 24px;
@@ -1194,6 +1201,7 @@
             <input type="text" class="form-input" id="elsie-new-item" placeholder="Add task...">
             <button class="btn btn-sm btn-elsie" onclick="addChecklistItem('elsie')">Add</button>
         </div>
+        <button class="btn btn-ghost btn-clear-checks" onclick="clearCompleted('elsie')">Uncheck All</button>
     </div>
 
     <div class="glass-card checklist-card cade">
@@ -1206,6 +1214,7 @@
             <input type="text" class="form-input" id="cade-new-item" placeholder="Add task...">
             <button class="btn btn-sm btn-cade" onclick="addChecklistItem('cade')">Add</button>
         </div>
+        <button class="btn btn-ghost btn-clear-checks" onclick="clearCompleted('cade')">Uncheck All</button>
     </div>
 </div>
 
@@ -1318,43 +1327,49 @@
             const data = JSON.parse(savedData);
             const savedDate = new Date(data.savedDate);
             const today = new Date();
+            const isSameDay = savedDate.toDateString() === today.toDateString();
             
-            if (savedDate.toDateString() === today.toDateString()) {
+            // Time inputs only load if same day
+            if (isSameDay) {
                 if (data.elsieWake) document.getElementById('elsie-wake').value = data.elsieWake;
                 if (data.elsieEat) document.getElementById('elsie-eat').value = data.elsieEat;
                 if (data.cadeNapStart) document.getElementById('cade-nap-start').value = data.cadeNapStart;
                 if (data.cadeBed) document.getElementById('cade-bed').value = data.cadeBed;
-                
-                if (data.elsieToggle !== undefined) document.getElementById('elsie-toggle').checked = data.elsieToggle;
-                if (data.cadeToggle !== undefined) document.getElementById('cade-toggle').checked = data.cadeToggle;
-                
-                if (data.elsieChecklist) loadChecklistData('elsie', data.elsieChecklist);
-                if (data.cadeChecklist) loadChecklistData('cade', data.cadeChecklist);
-                
-                if (data.settings) {
-                    document.getElementById('elsie-wake-min').value = data.settings.elsieWakeMin || 75;
-                    document.getElementById('elsie-wake-max').value = data.settings.elsieWakeMax || 120;
-                    document.getElementById('elsie-feed-min').value = data.settings.elsieFeedMin || 120;
-                    document.getElementById('elsie-feed-max').value = data.settings.elsieFeedMax || 180;
-                    document.getElementById('elsie-nap-avg').value = data.settings.elsieNapAvg || 90;
-                    document.getElementById('cade-nap-dur').value = data.settings.cadeNapDur || 90;
-                    applySettings();
-                }
-                
                 generateSchedule();
             } else {
                 setDefaultTimes();
+            }
+            
+            // Toggles always load
+            if (data.elsieToggle !== undefined) document.getElementById('elsie-toggle').checked = data.elsieToggle;
+            if (data.cadeToggle !== undefined) document.getElementById('cade-toggle').checked = data.cadeToggle;
+            
+            // Checklists always load (persist across days) - but uncheck items on new day
+            if (data.elsieChecklist) loadChecklistData('elsie', data.elsieChecklist, !isSameDay);
+            if (data.cadeChecklist) loadChecklistData('cade', data.cadeChecklist, !isSameDay);
+            
+            // Settings always load
+            if (data.settings) {
+                document.getElementById('elsie-wake-min').value = data.settings.elsieWakeMin || 75;
+                document.getElementById('elsie-wake-max').value = data.settings.elsieWakeMax || 120;
+                document.getElementById('elsie-feed-min').value = data.settings.elsieFeedMin || 120;
+                document.getElementById('elsie-feed-max').value = data.settings.elsieFeedMax || 180;
+                document.getElementById('elsie-nap-avg').value = data.settings.elsieNapAvg || 90;
+                document.getElementById('cade-nap-dur').value = data.settings.cadeNapDur || 90;
+                applySettings();
             }
         } else {
             setDefaultTimes();
         }
     }
 
-    function loadChecklistData(kid, items) {
+    function loadChecklistData(kid, items, uncheckAll = false) {
         const container = document.getElementById(`${kid}-checklist`);
         container.innerHTML = '';
         items.forEach(item => {
-            addChecklistItemWithData(kid, item.text, item.completed);
+            // If it's a new day, load items but uncheck them
+            const completed = uncheckAll ? false : item.completed;
+            addChecklistItemWithData(kid, item.text, completed);
         });
     }
 
@@ -1663,6 +1678,16 @@
 
     function deleteChecklistItem(btn) {
         btn.closest('.checklist-item').remove();
+        saveData();
+    }
+
+    function clearCompleted(kid) {
+        const container = document.getElementById(`${kid}-checklist`);
+        container.querySelectorAll('.checklist-item').forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox.checked = false;
+            item.classList.remove('completed');
+        });
         saveData();
     }
 
