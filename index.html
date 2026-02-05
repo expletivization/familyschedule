@@ -1285,27 +1285,48 @@
     };
 
     // --- LOCALSTORAGE FUNCTIONS ---
+    
+    // Immediate save for checklists - more reliable on iOS
+    function saveChecklistsImmediately() {
+        try {
+            const existingData = localStorage.getItem('familySyncDataV2');
+            let data = existingData ? JSON.parse(existingData) : {};
+            
+            data.elsieChecklist = getChecklistData('elsie');
+            data.cadeChecklist = getChecklistData('cade');
+            data.savedDate = new Date().toDateString();
+            
+            localStorage.setItem('familySyncDataV2', JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save checklists:', e);
+        }
+    }
+    
     function saveData() {
-        const data = {
-            elsieWake: document.getElementById('elsie-wake').value,
-            elsieEat: document.getElementById('elsie-eat').value,
-            cadeNapStart: document.getElementById('cade-nap-start').value,
-            cadeBed: document.getElementById('cade-bed').value,
-            elsieToggle: document.getElementById('elsie-toggle').checked,
-            cadeToggle: document.getElementById('cade-toggle').checked,
-            elsieChecklist: getChecklistData('elsie'),
-            cadeChecklist: getChecklistData('cade'),
-            settings: {
-                elsieWakeMin: document.getElementById('elsie-wake-min').value,
-                elsieWakeMax: document.getElementById('elsie-wake-max').value,
-                elsieFeedMin: document.getElementById('elsie-feed-min').value,
-                elsieFeedMax: document.getElementById('elsie-feed-max').value,
-                elsieNapAvg: document.getElementById('elsie-nap-avg').value,
-                cadeNapDur: document.getElementById('cade-nap-dur').value
-            },
-            savedDate: new Date().toDateString()
-        };
-        localStorage.setItem('familySyncDataV2', JSON.stringify(data));
+        try {
+            const data = {
+                elsieWake: document.getElementById('elsie-wake').value,
+                elsieEat: document.getElementById('elsie-eat').value,
+                cadeNapStart: document.getElementById('cade-nap-start').value,
+                cadeBed: document.getElementById('cade-bed').value,
+                elsieToggle: document.getElementById('elsie-toggle').checked,
+                cadeToggle: document.getElementById('cade-toggle').checked,
+                elsieChecklist: getChecklistData('elsie'),
+                cadeChecklist: getChecklistData('cade'),
+                settings: {
+                    elsieWakeMin: document.getElementById('elsie-wake-min').value,
+                    elsieWakeMax: document.getElementById('elsie-wake-max').value,
+                    elsieFeedMin: document.getElementById('elsie-feed-min').value,
+                    elsieFeedMax: document.getElementById('elsie-feed-max').value,
+                    elsieNapAvg: document.getElementById('elsie-nap-avg').value,
+                    cadeNapDur: document.getElementById('cade-nap-dur').value
+                },
+                savedDate: new Date().toDateString()
+            };
+            localStorage.setItem('familySyncDataV2', JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save data:', e);
+        }
     }
 
     function getChecklistData(kid) {
@@ -1321,44 +1342,63 @@
     }
 
     function loadSavedData() {
-        const savedData = localStorage.getItem('familySyncDataV2');
-        
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            const savedDate = new Date(data.savedDate);
-            const today = new Date();
-            const isSameDay = savedDate.toDateString() === today.toDateString();
+        try {
+            const savedData = localStorage.getItem('familySyncDataV2');
             
-            // Time inputs only load if same day
-            if (isSameDay) {
-                if (data.elsieWake) document.getElementById('elsie-wake').value = data.elsieWake;
-                if (data.elsieEat) document.getElementById('elsie-eat').value = data.elsieEat;
-                if (data.cadeNapStart) document.getElementById('cade-nap-start').value = data.cadeNapStart;
-                if (data.cadeBed) document.getElementById('cade-bed').value = data.cadeBed;
-                generateSchedule();
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                
+                // Defensive check for savedDate
+                let isSameDay = false;
+                if (data.savedDate) {
+                    try {
+                        const savedDate = new Date(data.savedDate);
+                        const today = new Date();
+                        isSameDay = savedDate.toDateString() === today.toDateString();
+                    } catch (e) {
+                        console.warn('Could not parse saved date, treating as new day');
+                    }
+                }
+                
+                // Time inputs only load if same day
+                if (isSameDay) {
+                    if (data.elsieWake) document.getElementById('elsie-wake').value = data.elsieWake;
+                    if (data.elsieEat) document.getElementById('elsie-eat').value = data.elsieEat;
+                    if (data.cadeNapStart) document.getElementById('cade-nap-start').value = data.cadeNapStart;
+                    if (data.cadeBed) document.getElementById('cade-bed').value = data.cadeBed;
+                    generateSchedule();
+                } else {
+                    setDefaultTimes();
+                }
+                
+                // Toggles always load
+                if (data.elsieToggle !== undefined) document.getElementById('elsie-toggle').checked = data.elsieToggle;
+                if (data.cadeToggle !== undefined) document.getElementById('cade-toggle').checked = data.cadeToggle;
+                
+                // Checklists always load (persist across days) - but uncheck items on new day
+                // Only load if checklist data exists and is an array
+                if (Array.isArray(data.elsieChecklist)) {
+                    loadChecklistData('elsie', data.elsieChecklist, !isSameDay);
+                }
+                if (Array.isArray(data.cadeChecklist)) {
+                    loadChecklistData('cade', data.cadeChecklist, !isSameDay);
+                }
+                
+                // Settings always load
+                if (data.settings) {
+                    document.getElementById('elsie-wake-min').value = data.settings.elsieWakeMin || 75;
+                    document.getElementById('elsie-wake-max').value = data.settings.elsieWakeMax || 120;
+                    document.getElementById('elsie-feed-min').value = data.settings.elsieFeedMin || 120;
+                    document.getElementById('elsie-feed-max').value = data.settings.elsieFeedMax || 180;
+                    document.getElementById('elsie-nap-avg').value = data.settings.elsieNapAvg || 90;
+                    document.getElementById('cade-nap-dur').value = data.settings.cadeNapDur || 90;
+                    applySettings();
+                }
             } else {
                 setDefaultTimes();
             }
-            
-            // Toggles always load
-            if (data.elsieToggle !== undefined) document.getElementById('elsie-toggle').checked = data.elsieToggle;
-            if (data.cadeToggle !== undefined) document.getElementById('cade-toggle').checked = data.cadeToggle;
-            
-            // Checklists always load (persist across days) - but uncheck items on new day
-            if (data.elsieChecklist) loadChecklistData('elsie', data.elsieChecklist, !isSameDay);
-            if (data.cadeChecklist) loadChecklistData('cade', data.cadeChecklist, !isSameDay);
-            
-            // Settings always load
-            if (data.settings) {
-                document.getElementById('elsie-wake-min').value = data.settings.elsieWakeMin || 75;
-                document.getElementById('elsie-wake-max').value = data.settings.elsieWakeMax || 120;
-                document.getElementById('elsie-feed-min').value = data.settings.elsieFeedMin || 120;
-                document.getElementById('elsie-feed-max').value = data.settings.elsieFeedMax || 180;
-                document.getElementById('elsie-nap-avg').value = data.settings.elsieNapAvg || 90;
-                document.getElementById('cade-nap-dur').value = data.settings.cadeNapDur || 90;
-                applySettings();
-            }
-        } else {
+        } catch (e) {
+            console.error('Failed to load saved data:', e);
             setDefaultTimes();
         }
     }
@@ -1366,10 +1406,15 @@
     function loadChecklistData(kid, items, uncheckAll = false) {
         const container = document.getElementById(`${kid}-checklist`);
         container.innerHTML = '';
+        
+        if (!Array.isArray(items)) return;
+        
         items.forEach(item => {
-            // If it's a new day, load items but uncheck them
-            const completed = uncheckAll ? false : item.completed;
-            addChecklistItemWithData(kid, item.text, completed);
+            if (item && typeof item.text === 'string') {
+                // If it's a new day, load items but uncheck them
+                const completed = uncheckAll ? false : !!item.completed;
+                addChecklistItemWithData(kid, item.text, completed);
+            }
         });
     }
 
@@ -1412,6 +1457,21 @@
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         
         loadSavedData();
+        
+        // Critical for iOS Safari - save when page is hidden or closed
+        window.addEventListener('beforeunload', saveData);
+        
+        // visibilitychange is more reliable on iOS Safari than beforeunload
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                saveData();
+            }
+        });
+        
+        // pagehide is another iOS Safari fallback
+        window.addEventListener('pagehide', function(event) {
+            saveData();
+        });
         
         document.getElementById('elsie-age').innerText = getAge(CONFIG.elsie.dob);
         document.getElementById('cade-age').innerText = getAge(CONFIG.cade.dob);
@@ -1648,7 +1708,9 @@
         
         addChecklistItemWithData(kid, text, false);
         input.value = '';
-        saveData();
+        
+        // Use immediate save for checklists
+        saveChecklistsImmediately();
     }
 
     function addChecklistItemWithData(kid, text, completed) {
@@ -1673,12 +1735,14 @@
         } else {
             item.classList.remove('completed');
         }
-        saveData();
+        // Use immediate save for checklists
+        saveChecklistsImmediately();
     }
 
     function deleteChecklistItem(btn) {
         btn.closest('.checklist-item').remove();
-        saveData();
+        // Use immediate save for checklists
+        saveChecklistsImmediately();
     }
 
     function clearCompleted(kid) {
@@ -1688,7 +1752,8 @@
             checkbox.checked = false;
             item.classList.remove('completed');
         });
-        saveData();
+        // Use immediate save for checklists
+        saveChecklistsImmediately();
     }
 
     // --- SETTINGS FUNCTIONS ---
